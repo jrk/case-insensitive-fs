@@ -39,41 +39,39 @@ class CaseInsensitiveLoopback(LoggingMixIn, Operations):
     def _find(self, path):
         """Search for a version of this file using case-insensitive semantics"""
         try:
-            print "Searching for '%s'" % path
+            self.log.debug("Searching for '%s'" % path)
             os.stat(path)
-            print "  found!"
+            self.log.debug("  found!")
             return path
         except OSError:
-            print "  not found!"
+            self.log.debug("  not found!")
             segs = path.split(os.path.sep)
             found_parent = os.path.sep
             assert segs[0] == '' # expect a leading /
             for i in range(1, len(segs)): # start after leading /
                 try:
                     parent = os.path.sep.join(segs[:i+1])
-                    print "  searching parent", i, parent
+                    self.log.debug("  searching parent %d %s" % (i, str(parent)))
                     os.stat(parent)
-                    print "    found"
+                    self.log.debug("    found")
                     found_parent = parent
                 except OSError:
-                    print "    NOT found"
+                    self.log.debug("    NOT found")
                     break
 
             # does the found_parent dir contain a differently-cased version of the requested path?
-            print found_parent, segs[i], os.listdir(found_parent)
             candidates = [f for f in os.listdir(found_parent) if f.lower() == segs[i].lower()]
-            print '  Candidates:', candidates
+            self.log.debug('  Candidates: %s' % str(candidates))
             if candidates:
                 if len(candidates) > 1:
                     self.log.warn('Case ambiguity: %s%s{%s}' % (found_parent, os.path.sep, ','.join(candidates)))
                 segs[i] = candidates[0]
                 path = os.path.sep.join(segs)
                 if i < (len(segs)-1):
-                    print 'recursing', i, len(segs)-1
+                    self.log.debug('recursing')
                     path = self._find(path) # recursively search with the new case-corrected path segment
-                else:
-                    print 'not recursing', i, len(segs)-1
-            print path
+
+            self.log.debug('resolved to [or failed with] path: %s' % path)
 
             # returns path unmodified if we were unable to find case-corrected candidates.
             # expects underlying command implementations to handle file-not-found correctly if so.
